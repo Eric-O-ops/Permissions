@@ -10,4 +10,5 @@
         android:name="com.geektech.permissions.ui.fragments.ShowPictureFragment"
         android:label="fragment_show_picture"
         tools:layout="@layout/fragment_show_picture" />
+
 </navigation>

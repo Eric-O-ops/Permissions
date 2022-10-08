@@ -1,10 +1,10 @@
 package com.geektech.permissions.ui.fragments
 
 import android.Manifest
-import android.content.Context
+import android.content.ComponentName
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -16,10 +16,10 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.bumptech.glide.Glide
-import com.geektech.permissions.App
+import coil.load
 import com.geektech.permissions.BuildConfig
 import com.geektech.permissions.databinding.FragmentShowPictureBinding
+import java.io.File
 
 class ShowPictureFragment : Fragment() {
 
@@ -28,16 +28,24 @@ class ShowPictureFragment : Fragment() {
      private val permissionLauncher: ActivityResultLauncher<String>
      = registerForActivityResult(ActivityResultContracts.RequestPermission()){ result ->
          if (!result){
-             Toast.makeText(requireContext(), "You need permission",Toast.LENGTH_SHORT).show()
+
+             if(!shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)){
+
+                 Toast.makeText(requireContext(), "shouldShowRequestPermissionRationale",Toast.LENGTH_SHORT).show()
+                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                     Uri.parse("package:" + BuildConfig.APPLICATION_ID)))
+
+             }
 
          }else{
              Toast.makeText(requireContext(), "The permission is granted",Toast.LENGTH_SHORT).show()
-             takeAndAddPicture()
+             takePictureIntent.launch("image/*")
+
          }
      }
 
     private val takePictureIntent = registerForActivityResult(ActivityResultContracts.GetContent()){
-        Glide.with(binding.image).load(it).into(binding.image)
+        binding.image.load(it)
 
     }
 
@@ -50,50 +58,23 @@ class ShowPictureFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        putPicture()
-
-    }
-
-    private fun putPicture(){
         binding.addPicture.setOnClickListener {
+            checkPermission()
 
-            if( shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE) )
-                {
-                    askPermission()
+        }
+    }
 
-                }
-            else if(checkPermission() != PackageManager.PERMISSION_GRANTED &&
-                App.preferences.getBooleanValue("askAlreadyPermission"))
-                {
-                    goToSettingsForPermission()
+    private fun checkPermission(){
+        when{
+            ContextCompat.checkSelfPermission(requireContext(),Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED-> {
+                permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
 
-            }else {
-                    askPermission()
-                    App.preferences.setBooleanValue("askAlreadyPermission",true)
-
-                }
             }
-    }
+            else -> {
+                takePictureIntent.launch("image/*")
 
-    private fun askPermission(){
-        permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-
-    }
-
-    private fun takeAndAddPicture(){
-            takePictureIntent.launch("image/*")
-
-    }
-
-    private fun checkPermission(): Int{
-       return ContextCompat.checkSelfPermission(requireContext(),Manifest.permission.READ_EXTERNAL_STORAGE)
-
-    }
-
-    private fun goToSettingsForPermission(){
-        Toast.makeText(requireContext(), "Please, give grant your permission",Toast.LENGTH_LONG).show()
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            Uri.parse("package:" + BuildConfig.APPLICATION_ID)))
-
+            }
+        }
     }
 }
